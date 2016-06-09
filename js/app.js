@@ -451,7 +451,7 @@ function mousedown() {
 
     // insert new node at point
     var point = d3.mouse(this),
-        node = {id: 'A_'+String(++lastNodeId), reflexive: false};
+        node = {id: client_id+String(++lastNodeId), reflexive: false};
 
     node.x = point[0];
     node.y = point[1];
