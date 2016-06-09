@@ -1,13 +1,23 @@
 var client_id = "";
+var merged_nodes;
+var merged_links;
+
+var nodes = [
+    ],
+    lastNodeId = -1, // GCounter.
+    links = [
+        //{source: nodes[0], target: nodes[1], left: false, right: true }
+    ];
+
 
 $(document).ready(function() {
-  console.log('On page load!');
+  // console.log('On page load!');
   $.ajax({
     url: "http://localhost:5000/client/new",
     type: "get", //send it through get method
     success: function(response) {
-      console.log('Client ID reseived');
-      console.log(client_id);
+      //console.log('Client ID reseived');
+      // c/onsole.log(client_id);
       client_id = response['client_id'];
 
       $.ajax({
@@ -18,7 +28,7 @@ $(document).ready(function() {
           key: "nodes"
         },
         success: function(response) {
-          console.log(response)
+          // console.log(response)
         },
         error: function(xhr) {
         }
@@ -32,7 +42,7 @@ $(document).ready(function() {
           key: "links"
         },
         success: function(response) {
-          console.log(response);
+          // console.log(response);
         },
         error: function(xhr) {
         }
@@ -44,7 +54,7 @@ $(document).ready(function() {
 });
 
 window.setInterval(function(){
-  console.log("Called every 5 seconds");
+  // console.log("Called every 5 seconds");
   nodesAndLinksStr = convertNodesAndLinksToString();
 
   $.ajax({
@@ -57,59 +67,160 @@ window.setInterval(function(){
       delete_items: nodesAndLinksStr[1]
     },
     success: function(response) {
-      console.log(response);
+        console.log('Sent Nodes!');
+        $.ajax({
+            url: "http://localhost:5000/set/twop/set",
+            type: "get", //send it through get method
+            data: {
+                client_id: client_id,
+                key:"links",
+                add_items: nodesAndLinksStr[2],
+                delete_items: nodesAndLinksStr[3]
+            },
+            success: function(response) {
+                console.log('Sent Links!');
+                $.ajax({
+                    url: "http://localhost:5000/set/twop/get",
+                    type: "get",
+                    data: {
+                        client_id: client_id,
+                        key: "nodes"
+                    },
+                    success: function(response) {
+                        console.log('Got nodes!');
+                        nodes_temp = response['set'];
+                        for(var i = 0; i < nodes_temp.length; i++) {
+                            nodes_temp[i] = JSON.parse(nodes_temp[i]);
+                            checkNodeFlag = false;
+                            for(var j = 0; j < nodes.length; j++) {
+                                if(nodes[j]["id"] == nodes_temp[i]["id"]) {
+                                    checkNodeFlag = true;
+                                    break;
+                                }
+                            }
+                            if(!checkNodeFlag) {
+                                nodes.push(nodes_temp[i]);
+                            }
+                        }
+                        restart();
+                        $.ajax({
+                            url: "http://localhost:5000/set/twop/get",
+                            type: "get",
+                            data: {
+                                client_id: client_id,
+                                key: "links"
+                            },
+                            success: function (response) {
+                                console.log('Got links!');
+                                // console.log(response);
+                                links_temp = response['set'];
+                                if(links_temp == 'undefined') {
+                                    return;
+                                }
+                                for(var i = 0; i < links_temp.length; i++) {
+                                    links_temp[i] = JSON.parse(links_temp[i]);
+                                    checkLinkFlag = false;
+                                    for(var j = 0; j < links.length; j++) {
+                                        if(links[j]['left'] == links_temp[i]['left'] &&
+                                            links[j]['right'] == links_temp[i]['right'] &&
+                                            links[j]['source']['id'] == links_temp[i]['source']['id'] &&
+                                            links[j]['target']['id'] == links_temp[i]['target']['id']) {
+                                            checkLinkFlag = true;
+                                            break;
+                                        }
+                                    }
+                                    if(!checkLinkFlag) {
+                                        for(var j = 0; j < nodes.length; j++) {
+                                            if(links_temp[i]['source']['id'] == nodes[j]['id']) {
+                                                links_temp[i]['source'] = nodes[j];
+                                            }
+                                            if(links_temp[i]['target']['id'] == nodes[j]['id']) {
+                                                links_temp[i]['target'] = nodes[j];
+                                            }
+                                        }
+                                        console.log("Links Gotten");
+                                        console.log(links_temp[i]);
+                                        links.push(links_temp[i]);
+                                    }
+                                }
+                                // console.log(nodes);
+                                console.log("Current Links");
+                                console.log(links);
+                                restart();
+                            },
+                            error: function (xhr) {
+                                console.log(xhr);
+                            }
+                        });
+                    },
+                    error: function(xhr) {
+                        console.log(xhr);
+                    }
+                });
+
+            },
+            error: function(xhr) {
+            }
+        });
     },
     error: function(xhr) {
       console.log("shit!");
     }
   });
 
-  $.ajax({
-    url: "http://localhost:5000/set/twop/set",
-    type: "get", //send it through get method
-    data: {
-      client_id: client_id,
-      key:"links",
-      add_items: nodesAndLinksStr[2],
-      delete_items: nodesAndLinksStr[3]
-    },
-    success: function(response) {
-      console.log(response);
-    },
-    error: function(xhr) {
-    }
-  });
 
-  $.ajax({
-    url: "http://localhost:5000/set/twop/get",
-    type: "get", //send it through get method
-    data: {
-      client_id: client_id,
-      key:"nodes",
-    },
-    success: function(response) {
-      console.log('This is the nodes set!');
-      console.log(response);
-    },
-    error: function(xhr) {
-    }
-  });
 
-  $.ajax({
-    url: "http://localhost:5000/set/twop/get",
-    type: "get", //send it through get method
-    data: {
-      client_id: client_id,
-      key:"links",
-    },
-    success: function(response) {
-      console.log('This is the links set!');
-      console.log(response);
-    },
-    error: function(xhr) {
-    }
-  });
-
+  // $.ajax({
+  //   url: "http://localhost:5000/set/twop/get",
+  //   type: "get", //send it through get method
+  //   data: {
+  //     client_id: client_id,
+  //     key:"nodes",
+  //   },
+  //   success: function(response) {
+  //     // console.log('This is the nodes set!');
+  //     // console.log(response);
+  //       merged_nodes = [];
+  //       for(var i in response['set']){
+  //           var node_temp = JSON.parse(response['set'][i]);
+  //           node_temp['px'] = 0;
+  //           node_temp['py'] = 0;
+  //           node_temp['x'] = 0;
+  //           node_temp['y'] = 0;
+  //           node_temp['weight'] = 1;
+  //           merged_nodes.push(node_temp);
+  //       }
+  //       $.ajax({
+  //           url: "http://localhost:5000/set/twop/get",
+  //           type: "get", //send it through get method
+  //           data: {
+  //               client_id: client_id,
+  //               key:"links",
+  //           },
+  //           success: function(response) {
+  //               // console.log('This is the links set!');
+  //               // console.log(response);
+  //               merged_links = [];
+  //               for(var i in response['set']){
+  //                   var link_temp = JSON.parse(response['set'][i]);
+  //                   console.log('index=' + getNodeIndex(link_temp['source'], merged_nodes).toString());
+  //                   link_temp['source'] = merged_nodes[getNodeIndex(link_temp['source'], merged_nodes)];
+  //                   merged_links.push(link_temp);
+  //               }
+  //               //nodes = merged_nodes;
+  //               //links = merged_links;
+  //               restart();
+  //
+  //           },
+  //           error: function(xhr) {
+  //           }
+  //       });
+  //   },
+  //   error: function(xhr) {
+  //   }
+  // });
+  //
+  //
 
 }, 5000);
 
@@ -155,12 +266,6 @@ var removedNodes = [],
     removedLinks = [],
     addedLinks = [];
 
-var nodes = [
-    ],
-    lastNodeId = -1, // GCounter.
-    links = [
-        //{source: nodes[0], target: nodes[1], left: false, right: true }
-    ];
 
 // init D3 force layout
 var force = d3.layout.force()
@@ -218,49 +323,31 @@ function resetMouseVars() {
 
 function getNodeIndex(node, nodes){
     for(var n in nodes){
-        if(nodes[n].id == node.id)
-            return n;
+        if(nodes[n]['id'] == node['id'])
+            return parseInt(n);
     }
     return -1;
 }
-function getMergedResult(){
 
-    // get merged result from added_nodes, removed_nodes, added_links, removed_links
-    for(var n in nodesMerged){
-        if(getNodeIndex(nodesMerged[n], nodes)==-1) {
-            nodes.push(nodesMerged[n]);
-        }
-    }
-    for(var n in nodes){
-        if(getNodeIndex(nodes[n], nodesMerged)==-1) {
-            nodes.splice(getNodeIndex(nodes[n], nodes), 1);
-        }
-    }
-    for(var l in linksMerged){
-        if(getNodeIndex(linksMerged[l], links)==-1) {
-            links.push(linksMerged[l]);
-        }
-    }
-    for(var l in links){
-        if(getNodeIndex(links[n], linksMerged)==-1) {
-            links.splice(getNodeIndex(links[l], links), 1);
-        }
-    }
-    restart();
-}
 function getLinkIndex(link, links){
     for(var l in links){
+        if(link==null) {
+            console.log('null link');
+            continue;
+        }
         if(
             getNodeIndex(links[l].source) == getNodeIndex(link.source) &&
             getNodeIndex(links[l].target) == getNodeIndex(link.source) &&
             getNodeIndex(links[l].left) == getNodeIndex(link.left) &&
             getNodeIndex(links[l].right) == getNodeIndex(link.right)
         ){
-            return l;
+            return parseInt(l);
         }
     }
     return -1;
 }
+
+
 // update force layout (called automatically each iteration)
 function tick() {
     // draw directed edges with proper padding from node centers
@@ -397,7 +484,7 @@ function restart() {
             if(link) {
                 link[direction] = true;
             } else {
-                link = {source: source, target: target, left: false, right: false};
+                link = {source: source, target: target, left: true, right: true};
                 link[direction] = true;
                 links.push(link);
                 addedLinks.push(pruneLink(link));
@@ -515,11 +602,11 @@ function keydown() {
         case 8: // backspace
         case 46: // delete
             if(selected_node) {
-                nodes.splice(getNodeIndex(selected_node, nodes), 1);
+                nodes.splice(nodes.indexOf(selected_node), 1);
                 removedNodes.push(pruneNode(selected_node));
                 spliceLinksForNode(selected_node);
             } else if(selected_link) {
-                links.splice(getLinkIndex(selected_link, links), 1);
+                links.splice(links.indexOf(selected_link), 1);
                 removedLinks.push(pruneLink(selected_link));
             }
             selected_link = null;
