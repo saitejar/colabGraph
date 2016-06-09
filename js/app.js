@@ -1,4 +1,139 @@
+var client_id = "";
 
+$(document).ready(function() {
+  console.log('On page load!');
+  $.ajax({
+    url: "http://localhost:5000/client/new",
+    type: "get", //send it through get method
+    success: function(response) {
+      console.log('Client ID reseived');
+      console.log(client_id);
+      client_id = response['client_id'];
+
+      $.ajax({
+        url: "http://localhost:5000/set/twop/new",
+        type: "get", //send it through get method
+        data: {
+          client_id: client_id,
+          key: "nodes"
+        },
+        success: function(response) {
+          console.log(response)
+        },
+        error: function(xhr) {
+        }
+      });
+
+      $.ajax({
+        url: "http://localhost:5000/set/twop/new",
+        type: "get", //send it through get method
+        data: {
+          client_id: client_id,
+          key: "links"
+        },
+        success: function(response) {
+          console.log(response);
+        },
+        error: function(xhr) {
+        }
+      });
+    },
+    error: function(xhr) {
+    }
+  });
+});
+
+window.setInterval(function(){
+  console.log("Called every 5 seconds");
+  nodesAndLinksStr = convertNodesAndLinksToString();
+
+  $.ajax({
+    url: "http://localhost:5000/set/twop/set",
+    type: "get", //send it through get method
+    data: {
+      client_id: client_id,
+      key:"nodes",
+      add_items: nodesAndLinksStr[0],
+      delete_items: nodesAndLinksStr[1]
+    },
+    success: function(response) {
+      console.log(response);
+    },
+    error: function(xhr) {
+      console.log("shit!");
+    }
+  });
+
+  $.ajax({
+    url: "http://localhost:5000/set/twop/set",
+    type: "get", //send it through get method
+    data: {
+      client_id: client_id,
+      key:"links",
+      add_items: nodesAndLinksStr[2],
+      delete_items: nodesAndLinksStr[3]
+    },
+    success: function(response) {
+      console.log(response);
+    },
+    error: function(xhr) {
+    }
+  });
+
+  $.ajax({
+    url: "http://localhost:5000/set/twop/get",
+    type: "get", //send it through get method
+    data: {
+      client_id: client_id,
+      key:"nodes",
+    },
+    success: function(response) {
+      console.log('This is the nodes set!');
+      console.log(response);
+    },
+    error: function(xhr) {
+    }
+  });
+
+  $.ajax({
+    url: "http://localhost:5000/set/twop/get",
+    type: "get", //send it through get method
+    data: {
+      client_id: client_id,
+      key:"links",
+    },
+    success: function(response) {
+      console.log('This is the links set!');
+      console.log(response);
+    },
+    error: function(xhr) {
+    }
+  });
+
+
+}, 5000);
+
+function convertNodesAndLinksToString() {
+  var removedNodesArr = [], addedNodesArr = [], addedLinksArr = [], removedLinksArr = [];
+  for(var node in removedNodes) {
+    removedNodesArr.push(JSON.stringify(removedNodes[node]));
+  }
+  for(var node in addedNodes) {
+    addedNodesArr.push(JSON.stringify(addedNodes[node]));
+  }
+  for(var node in addedLinks) {
+    addedLinksArr.push(JSON.stringify(addedLinks[node]));
+  }
+  for(var node in removedLinks) {
+    removedLinksArr.push(JSON.stringify(removedLinks[node]));
+  }
+  return [
+    JSON.stringify(addedNodesArr),
+    JSON.stringify(removedNodesArr),
+    JSON.stringify(addedLinksArr),
+    JSON.stringify(removedLinksArr)
+  ];
+}
 // set up SVG for D3
 var width  = 960,
     height = 500,
@@ -322,7 +457,6 @@ function mousedown() {
     node.y = point[1];
     nodes.push(pruneNode(node));
     addedNodes.push(pruneNode(node));
-
 
     restart();
 }
