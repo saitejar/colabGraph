@@ -12,7 +12,7 @@ var nodes = [
 
 $(document).ready(function() {
   // console.log('On page load!');
-  $.ajax({
+    $.ajax({
     url: "http://localhost:5000/client/new",
     type: "get", //send it through get method
     success: function(response) {
@@ -100,6 +100,20 @@ window.setInterval(function(){
                             }
                             if(!checkNodeFlag) {
                                 nodes.push(nodes_temp[i]);
+                            }
+                        }
+
+                        for(var i = 0; i < nodes.length; i++) {
+                            var foundFlag = false;
+                            for(var j = 0; j < nodes_temp.length; j++) {
+                                if(nodes[i]["id"] == nodes_temp[j]["id"]) {
+                                    foundFlag = true;
+                                    break;
+                                }
+                            }
+                            if(!foundFlag) {
+                                spliceLinksForNode(nodes[i]);
+                                nodes.splice(i, 1);
                             }
                         }
                         restart();
@@ -577,7 +591,7 @@ function spliceLinksForNode(node) {
         return (l.source === node || l.target === node);
     });
     toSplice.map(function(l) {
-        links.splice(getLinkIndex(l, links), 1);
+        links.splice(links.indexOf(l), 1);
         removedLinks.push(pruneLink(l));
     });
 }
